@@ -30,3 +30,8 @@ GET /<index_name>/_search
     }
   }
 }
+
+
+# cluster status
+GET /_cluster/health
+GET /_cluster/allocation/explain?pretty
