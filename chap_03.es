@@ -147,7 +147,95 @@ POST /website/_update/5
   }
 }
 
+# retry on conflicts
+POST /website/_update/4?retry_on_conflict=5
+{
+  "script": {
+    "source": "ctx._source.views+=1",
+    "lang": "painless"
+  },
+  "upsert": {
+      "views": 1
+  }
+}
+
 GET /website/_doc/4
+
+# Retrieving Multiple Documents
+###############################
+
+GET /_mget
+{
+  "docs": [
+    {
+      "_index": "website",
+      "_id": 2
+    },
+    {
+      "_index": "website",
+      "_id": 3,
+      "_source" : "views"
+    }
+  ]
+}
+
+GET website/_doc/_mget
+{
+  "docs": [
+    {
+      "_id": 2
+    },
+    {
+      "_id": 3
+    }
+  ]
+}
+
+GET website/_doc/_mget
+{
+  "ids": [ 2, 3 ]
+}
+
+GET website/_doc/_mget
+{
+  "ids": [ 2, 7 ]
+}
+
+# Bulk actions
+##############
+
+POST /_bulk
+{"delete": {"_index": "website", "_id": "123"}}
+{"create": {"_index": "website", "_id": "123"}}
+{"title": "Bulk update: a post"}
+{"index": {"_index": "website"}}
+{"title": "Bulk update: a second post"}
+{"update": {"_index": "website", "_id": "123", "retry_on_conflict": 5}}
+{"doc": {"title": "Update a post"}}
+
+GET /website/_search
+{
+  "query": {
+    "term": {
+      "title.keyword":  "Bulk update: a second post"
+    }
+  }
+}
+
+POST /website/_doc/_mget
+{
+  "ids": [123, "cK-2sn0BEuaQhtNh6W5M"]
+}
+
+POST website/_doc/_bulk
+{"delete": {"_id": "123"}}
+{"create": {"_id": "123"}}
+{"title": "Bulk update: a post"}
+{"index": {}}
+{"title": "Bulk update: a second post"}
+{"update": {"_id": "123", "retry_on_conflict": 5}}
+{"doc": {"title": "Update a post"}}
+
 
 # UTILS
 #######
