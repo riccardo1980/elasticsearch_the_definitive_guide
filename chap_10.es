@@ -1,9 +1,4 @@
 # Index Management
-
-GET _index_template/geopoint_locations-index-template
-
-GET geopoint_locations-index-1
-
 PUT my_temp_index
 {
   "settings": {
