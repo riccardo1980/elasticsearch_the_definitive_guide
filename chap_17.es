@@ -492,3 +492,95 @@ GET geo_locations/_explain/1
     }
   }
 }
+
+
+## scoring with scripts
+
+# DELETE geo_locations
+PUT geo_locations
+{
+  "mappings": {
+    "properties": {
+      "location": {
+        "type": "geo_point"
+      },
+      "price": {
+        "type": "float"
+      },
+      "margin": {
+        "type": "float"
+      },
+      "name": {
+        "type": "text"
+      }
+    }
+  }
+}
+
+POST geo_locations/_bulk
+{"index":{"_id":1}}
+{"location":{"lat":51.5,"lon":0.12},"price":50,"margin":1,"name":"should return 1+2+5"}
+{"index":{"_id":2}}
+{"location":{"lat":51.5,"lon":0.12},"price":200,"margin":1,"name":"should return 1+0+19"}
+
+GET geo_locations/_explain/2
+{
+  "query": {
+    "function_score": {
+      "query": {
+        "match_all": {}
+      },
+      "functions": [
+        {
+          "gauss": {
+            "location": {
+              "origin": {
+                "lat": 51.5,
+                "lon": 0.12
+              },
+              "offset": "2km",
+              "scale": "3km"
+            }
+          }
+        },
+        {
+          "gauss": {
+            "price": {
+              "origin": "50",
+              "offset": "50",
+              "scale": "20"
+            }
+          },
+          "weight": 2
+        },
+        {
+          "script_score": {
+            "script": {
+              "params": {
+                "threshold": 80,
+                "discount": 0.1,
+                "target": 10
+              },
+              "lang": "painless",
+              "source": """
+                def price = doc['price'].value;
+                def margin = doc['margin'].value;
+                if (price < params.threshold){
+                  return price * margin / params.target;
+                }
+                return price * (1-params.discount) * margin /params.target;
+              """
+            }
+          }
+        }
+      ],
+      "score_mode": "sum"
+    }
+  }
+}
+
+
+
+
+
+
