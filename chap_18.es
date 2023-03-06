@@ -162,6 +162,7 @@ GET blogs-*/_search
 
 ## One language per field
 
+DELETE movies
 PUT /movies
 {
   "mappings": {
@@ -202,7 +203,7 @@ GET movies/_analyze
 GET movies/_analyze
 {
   "text": "Club de Luta",
-  "field": "title_br"
+  "field": "title_es"
 }
 
 GET movies/_analyze
@@ -219,6 +220,147 @@ GET movies/_search
       "query": "club de lucha",
       "fields": ["title*", "title_es^2"],
       "type": "most_fields"
+    }
+  }
+}
+
+## Mixed-Language Fields
+### Analyze Multiple Times
+
+# DELETE movies
+PUT movies
+{
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "fields": {
+          "de": {
+            "type": "text",
+            "analyzer": "german"
+          },
+          "en": {
+            "type": "text",
+            "analyzer": "english"
+          },
+          "fr": {
+            "type": "text",
+            "analyzer": "french"
+          },
+          "es": {
+            "type": "text",
+            "analyzer": "spanish"
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT movies/_bulk
+{"index":{"_id":1}}
+{"title":"Fight club"}
+{"index":{"_id":2}}
+{"title":"club de luta"}
+{"index":{"_id":3}}
+{"title":"Les Enfants du Paradis"}
+{"index":{"_id":4}}
+{"title":"Das Boot"}
+
+GET movies/_analyze
+{
+  "field": "title.fr",
+  "text": "Les Enfants du Paradis"
+}
+
+GET movies/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "enfant",
+      "fields": ["title*"],
+      "type": "best_fields",
+      "tie_breaker": 0,
+      "boost": 1
+    }
+  }
+}
+
+# Use n-grams
+# DELETE movies
+
+PUT /movies
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "3gram": {
+          "type": "ngram",
+          "min_gram": 3,
+          "max_gram": 3
+        }
+      },
+      "analyzer": {
+        "trigrams": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "3gram"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "title": {
+        "type": "text",
+        "fields": {
+          "de": {
+            "type": "text",
+            "analyzer": "german"
+          },
+          "en": {
+            "type": "text",
+            "analyzer": "english"
+          },
+          "fr": {
+            "type": "text",
+            "analyzer": "french"
+          },
+          "es": {
+            "type": "text",
+            "analyzer": "spanish"
+          },
+          "general": {
+            "type": "text",
+            "analyzer": "trigrams"
+          }
+        }
+      }
+    }
+  }
+}
+
+PUT movies/_bulk    e   
+{"index":{"_id":1}}
+{"title":"Fight club"}
+{"index":{"_id":2}}
+{"title":"club de luta"}
+{"index":{"_id":3}}
+{"title":"Les Enfants du Paradis"}
+{"index":{"_id":4}}
+{"title":"Das Boot"}
+
+# should'nt be better a best_field approach?
+GET movies/_search/
+{
+  "query": {
+    "multi_match": {
+      "query": "club",
+      "fields": ["title*^1.5", "title.general"],
+      "type": "most_fields",
+      "minimum_should_match": "75%"
     }
   }
 }
