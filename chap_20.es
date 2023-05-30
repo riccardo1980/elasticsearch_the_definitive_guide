@@ -353,7 +353,89 @@ POST _analyze
   "text": ["åäöÅÄÖ"]
 }
 
+## Sorting and Collations
 
+DELETE my_index
+PUT my_index
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "case_insensitive_sort": {
+          "tokenizer": "keyword",
+          "filter": ["lowercase"]
+        },
+        "ducet_sort": {
+          "tokenizer": "keyword",
+          "filter": [ "icu_collation" ]
+        },
+        "german_phonebook_sort": {
+          "tokenizer": "keyword",
+          "analyzer": "german_phonebook"
+        }
+      },
+      "filter": {
+        "german_phonebook": {
+          "type": "icu_collation",
+          "language": "de",
+          "country": "DE",
+          "variant": "@collation=phonebook"
+        }
+      }
+    }
+  }, 
+  "mappings": {
+    "properties": {
+      "name": {
+        "type": "text",
+        "fields": {
+          "raw": {
+            "type": "keyword"
+          },
+          "lower_case_sort" : {
+            "type": "text",
+            "analyzer": "case_insensitive_sort",
+            "fielddata": true
+          },
+          "ducet_sort" : {
+            "type": "text",
+            "analyzer": "ducet_sort",
+            "fielddata": true
+          },
+          "german_phonebook_sort": {
+            "type": "text",
+            "analyzer": "german_phonebook_sort",
+            "fielddata": true
+          }
+        }
+      }
+    }
+  }
+}
 
+PUT my_index/_bulk
+{"index": {"_id": 1}}
+{"name": "Boffey"}
+{"index": {"_id": 2}}
+{"name": "BROWN"}
+{"index": {"_id": 3}}
+{"name": "bailey"}
+{"index": {"_id": 4}}
+{"name": "Böhm"}
 
+GET /my_index/_search?sort=name.raw
 
+GET /my_index/_search?sort=name.lower_case_sort
+
+GET /my_index/_search?sort=name.ducet_sort
+
+GET /my_index/_search
+{
+  "sort": [
+    {
+      "name.german_phonebook_sort": {
+        "order": "desc"
+      }
+    }
+  ]
+}
