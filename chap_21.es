@@ -105,3 +105,60 @@ GET /_analyze
   ],
   "text": "The stem_exclusion parameter allows you to specify"
 }
+
+# preventing stemming
+
+DELETE my_index
+PUT my_index
+{
+  "settings": {
+    "analysis": {
+      "filter": {
+        "no_stem": {
+          "type": "keyword_marker",
+          "keywords": [
+            "skies"
+          ]
+        }
+      },
+      "analyzer": {
+        "my_english": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "no_stem",
+            "porter_stem"
+          ]
+        },
+        "english": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase",
+            "porter_stem"
+          ]
+        }
+      }
+    }
+  }
+}
+
+GET my_index/_analyze
+{
+  "analyzer": "english",
+  "text": ["skies"]
+}
+
+GET my_index/_analyze
+{
+  "analyzer": "my_english",
+  "text": ["skies"]
+}
+
+
+
+
+
+
+
+
+
